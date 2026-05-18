@@ -3,8 +3,7 @@
 # 🎉 Anniversary Calculator Sensor for Home Assistant
 
 > 🔥 이 프로젝트는 [GrecHouse/anniversary-calculator](https://github.com/GrecHouse/anniversary-calculator)의 포크 버전입니다.\
-> 원본 개발자인 **그렉하우스** 님께 깊은 감사를 드립니다.\
- TTS 센서, 장보기 목록 등 일부 기능이 제거되었습니다. 이 기능이 필요하신 분은 기존 버전을 사용하시기 바랍니다.
+> 원본 개발자인 **그렉하우스** 님께 깊은 감사를 드립니다.
 
 홈어시스턴트 커스텀 컴포넌트입니다.\
 기념일 D-Day를 센서로 알려줍니다.
