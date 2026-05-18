@@ -175,25 +175,16 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         return dt_util.parse_date(calendar.SolarIsoFormat())
 
     def lunar_gapja(self, lunar_date_str: str) -> str:
-        intercalation = False
-        if '윤달' in lunar_date_str:
-            intercalation = True
-            lunar_date_str = lunar_date_str.replace(INTERCALATION, '')
+        """음력 날짜 문자열을 갑자(GapJa) 형식으로 변환."""
+        intercalation = INTERCALATION in lunar_date_str
+        date_part = lunar_date_str.replace(INTERCALATION, '')
+        
+        lunar = dt_util.parse_date(date_part)
+        if not lunar:
+            return "-"
+            
         calendar = KoreanLunarCalendar()
-        try:
-            lunar = dt_util.parse_date(lunar_date_str)
-            calendar.setLunarDate(lunar.year, lunar.month, lunar.day, intercalation)
-        except Exception:
-            try:
-                calendar.setLunarDate(
-                    int(lunar_date_str[:4]),
-                    int(lunar_date_str[5:7]),
-                    int(lunar_date_str[8:]),
-                    intercalation,
-                )
-            except Exception:
-                _LOGGER.debug("lunar_gapja: 갑자 변환 실패 — %s", lunar_date_str)
-                return "-"
+        calendar.setLunarDate(lunar.year, lunar.month, lunar.day, intercalation)
         return calendar.getGapJaString()
 
     def is_past(self, today: date) -> bool:
@@ -279,8 +270,8 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
                 '-' if self._mmdd or self._type != 'birth'
                 else self.korean_age(today, dday[1])
             ),
-            'is_lunar': str(self._lunar),
-            'is_mmdd': str(self._mmdd),
+            'is_lunar': self._lunar,
+            'is_mmdd': self._mmdd,
         }
 
     @callback
