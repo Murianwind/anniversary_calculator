@@ -8,6 +8,7 @@ MODEL = '기념일 계산기'
 ATTRIBUTION = 'Provided by GrecHouse'
 
 CONF_NAME = 'anniv_name'
+CONF_UID = 'unique_id'
 CONF_DATE = 'anniv_date'
 CONF_TYPE = 'anniv_type'
 CONF_LUNAR = 'lunar'
