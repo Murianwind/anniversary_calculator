@@ -11,7 +11,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
-from homeassistant.helpers.event import async_track_point_in_utc_time
+from homeassistant.helpers.event import async_track_time_change
 import homeassistant.util.dt as dt_util
 
 from korean_lunar_calendar import KoreanLunarCalendar
@@ -74,7 +74,8 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
     def __init__(self, hass, name, date_str, lunar, intercalation, anniv_type, mmdd, unique_id):
         """Initialize the sensor."""
         self._name = name
-        self._date = dt_util.parse_date(date_str)
+        parsed_date = dt_util.parse_date(date_str)
+        self._date = parsed_date.date() if parsed_date else None
         self._lunar = lunar
         self._intercalation = intercalation
         self._type = anniv_type
@@ -85,31 +86,29 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         self.hass = hass
         self.model = MODEL
         self.manufacturer = MANUFACT
-        self._update_internal_state(dt_util.utcnow())
-        self._cancel_timer = None
 
     async def async_added_to_hass(self) -> None:
         """HA 재시작 시 직전 상태를 복원해 잠깐 unknown이 되는 현상 방지."""
         await super().async_added_to_hass()
+
+        # 초기 상태 업데이트
+        self._update_internal_state(None)
+
         last_state = await self.async_get_last_state()
         if last_state is not None and self._state is None:
             self._state = last_state.state
 
-        # 첫 타이머 시작
-        self._cancel_timer = async_track_point_in_utc_time(
-            self.hass, self.point_in_time_listener, self.get_next_interval()
+        # 자정마다 타이머 시작 (local time 기준 00:00:01)
+        self.async_on_remove(
+            async_track_time_change(
+                self.hass, self.point_in_time_listener, hour=0, minute=0, second=1
+            )
         )
-
-    async def async_will_remove_from_hass(self) -> None:
-        """엔티티 제거 시 타이머 해제."""
-        if self._cancel_timer:
-            self._cancel_timer()
-        await super().async_will_remove_from_hass()
 
     @property
     def device_info(self):
         return {
-            "identifiers": {(DOMAIN, self._name)},
+            "identifiers": {(DOMAIN, self._unique_id)},
             "name": self._name,
             "model": self.model,
             "manufacturer": self.manufacturer,
@@ -151,6 +150,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
 
     def lunar_to_solar(self, today: date, this_year: bool) -> date | None:
         lunar_date = self._date
+        if lunar_date is None: return None
         calendar = KoreanLunarCalendar()
         if this_year or self._mmdd:
             calendar.setLunarDate(today.year, lunar_date.month, lunar_date.day, self._intercalation)
@@ -161,18 +161,21 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
                 _LOGGER.warning("Non-existent date correction: %s -> %s", lunar_date, calendar.SolarIsoFormat())
         else:
             calendar.setLunarDate(lunar_date.year, lunar_date.month, lunar_date.day, self._intercalation)
-        return dt_util.parse_date(calendar.SolarIsoFormat())
+        res = dt_util.parse_date(calendar.SolarIsoFormat())
+        return res.date() if res else None
 
     def lunar_to_solar_early_day(self, today: date) -> date | None:
         """전년도 기준 음력→양력 변환 (d_day 계산용)."""
         lunar_date = self._date
+        if lunar_date is None: return None
         calendar = KoreanLunarCalendar()
         calendar.setLunarDate(today.year - 1, lunar_date.month, lunar_date.day, self._intercalation)
         if calendar.SolarIsoFormat() == '0000-00-00':
             calib = lunar_date - timedelta(1)
             calendar.setLunarDate(today.year - 1, calib.month, calib.day, self._intercalation)
             _LOGGER.warning("Non-existent date correction: %s -> %s", lunar_date, calendar.SolarIsoFormat())
-        return dt_util.parse_date(calendar.SolarIsoFormat())
+        res = dt_util.parse_date(calendar.SolarIsoFormat())
+        return res.date() if res else None
 
     def lunar_gapja(self, lunar_date_str: str) -> str:
         intercalation = False
@@ -199,25 +202,31 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
     def is_past(self, today: date) -> bool:
         if self._lunar:
             anniv = self.lunar_to_solar(today, True)
+            if anniv is None: return False
         else:
             anniv = date(today.year, self._date.month, self._date.day)
         return (anniv - today).days < 0
 
     def past_days(self, today: date) -> int:
         anniv = self._date if not self._lunar else self.lunar_to_solar(today, False)
+        if anniv is None: return 0
         return (today - anniv).days + 1
 
     def korean_age(self, today: date, upcoming_date_str: str) -> int:
-        upcoming_year = dt_util.parse_date(upcoming_date_str).year
-        return today.year - self._date.year + 1 + (upcoming_year - today.year)
+        upcoming_date = dt_util.parse_date(upcoming_date_str)
+        if upcoming_date is None: return 0
+        passed_this_year = 1 if upcoming_date.year > today.year else 0
+        return today.year - self._date.year + passed_this_year
 
     def upcoming_count(self, today: date) -> int:
         anniv = self._date if not self._lunar else self.lunar_to_solar(today, False)
+        if anniv is None: return 0
         offset = 1 if self.is_past(today) else 0
         return today.year - anniv.year + offset
 
     def d_day(self, today: date) -> list:
         anniv = self._date
+        if anniv is None: return [0, "0000-00-00"]
 
         if self._lunar:
             # 전년도 음력 기준 양력일이 아직 지나지 않았으면 그쪽이 더 가까운 기념일
@@ -237,15 +246,9 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
             else:
                 anniv = date(today.year, anniv.month, anniv.day)
 
+        if anniv is None: return [0, "0000-00-00"]
         delta = anniv - today
         return [delta.days, anniv.strftime('%Y-%m-%d')]
-
-    def get_next_interval(self, now=None):
-        """자정 직후 업데이트 시각 계산."""
-        if now is None:
-            now = dt_util.utcnow()
-        midnight = dt_util.start_of_local_day(dt_util.as_local(now))
-        return midnight + timedelta(seconds=86400)
 
     def _update_internal_state(self, time_date) -> None:
         today = dt_util.as_local(dt_util.utcnow()).date()
@@ -253,6 +256,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         self._state = dday[0]
 
         solar_date = self._date
+        if solar_date is None: return
         if self._lunar:
             solar_date = self.lunar_to_solar(today, False)
             lunar_date = self._date.strftime('%Y-%m-%d')
@@ -278,15 +282,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         }
 
     @callback
-    def point_in_time_listener(self, time_date) -> None:
-        """자정마다 상태를 갱신하고 다음 자정 타이머를 등록."""
+    def point_in_time_listener(self, _time_date) -> None:
+        """자정마다 상태를 갱신."""
         self._update_internal_state(time_date)
         self.async_schedule_update_ha_state()
-        
-        # 기존 타이머가 있다면 취소 후 재등록 (메모리 누수 방지)
-        if self._cancel_timer:
-            self._cancel_timer()
-
-        self._cancel_timer = async_track_point_in_utc_time(
-            self.hass, self.point_in_time_listener, self.get_next_interval()
-        )
