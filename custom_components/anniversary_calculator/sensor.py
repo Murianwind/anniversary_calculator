@@ -12,6 +12,7 @@ from homeassistant.core import HomeAssistant, callback
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.util import slugify
 import homeassistant.util.dt as dt_util
 
 from korean_lunar_calendar import KoreanLunarCalendar
@@ -81,6 +82,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         self._type = entry.data.get(CONF_TYPE)
         self._unique_id = entry.data.get(CONF_UID)
         self._mmdd = is_mmdd
+        self.entity_id = f"sensor.{slugify(self._unique_id)}"
         self._state = None
         self._attribute: dict = {}
         self.model = MODEL
