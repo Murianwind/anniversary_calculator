@@ -1,13 +1,12 @@
 DOMAIN = "anniversary_calculator"
 NAME = "Anniversary Calculator"
-PLATFORM = "sensor"
 
 MANUFACT   = 'Murianwind'
 MODEL = '기념일 계산기'
 ATTRIBUTION = 'Provided by Murianwind'
 
 CONF_NAME = 'anniv_name'
-CONF_UID = 'unique_id'
+CONF_UID = 'anniv_uid'
 CONF_DATE = 'anniv_date'
 CONF_TYPE = 'anniv_type'
 CONF_LUNAR = 'lunar'
