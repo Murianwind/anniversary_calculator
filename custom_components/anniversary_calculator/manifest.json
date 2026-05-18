@@ -1,12 +1,12 @@
 {
     "domain": "anniversary_calculator",
     "name": "기념일 계산기",
-    "documentation": "https://github.com/GrecHouse/anniversary-calculator",
+    "documentation": "https://github.com/Murianwind/anniversary_calculator",
     "config_flow": true,
-    "codeowners": ["@GrecHouse"],
+    "codeowners": ["@Murianwind"],
     "dependencies": [],
     "requirements": ["korean-lunar-calendar==0.3.1"],
     "iot_class": "calculated",
-    "issue_tracker": "https://github.com/GrecHouse/anniversary-calculator/issues",
+    "issue_tracker": "https://github.com/Murianwind/anniversary_calculator/issues",
     "version": "2.0.0"
 }
