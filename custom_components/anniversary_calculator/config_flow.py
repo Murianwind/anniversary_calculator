@@ -10,6 +10,7 @@ from homeassistant.helpers import selector
 
 from .const import (
     DOMAIN,
+    CONF_UID,
     CONF_NAME,
     CONF_DATE,
     CONF_TYPE,
@@ -51,18 +52,11 @@ class AnniversaryConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 name: str = user_input[CONF_NAME]
                 anniv_type: str = user_input[CONF_TYPE]
+                unique_id: str = user_input[CONF_UID]
 
-                # 이름 + 날짜 + 종류가 모두 동일한 항목이 이미 있으면 중복으로 판단
-                for existing_entry in self._async_current_entries():
-                    if (
-                        existing_entry.data.get(CONF_NAME) == name
-                        and existing_entry.data.get(CONF_DATE) == date_str
-                        and existing_entry.data.get(CONF_TYPE) == anniv_type
-                    ):
-                        return self.async_abort(reason="already_configured")
-
-                unique_id = f"anniv-{name}-{date_str}"
+                # 사용자가 입력한 고유 ID 중복 검사
                 await self.async_set_unique_id(unique_id)
+                self._abort_if_unique_id_configured()
 
                 _LOGGER.debug("unique_id: %s, title: %s", unique_id, name)
                 return self.async_create_entry(title=name, data=user_input)
@@ -78,6 +72,7 @@ class AnniversaryConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         schema = vol.Schema(
             {
                 vol.Required(CONF_NAME): str,
+                vol.Required(CONF_UID): str,
                 vol.Required(CONF_DATE): str,
                 vol.Required(CONF_TYPE, default="anniversary"): vol.In(ANNIV_TYPE),
                 vol.Optional(CONF_LUNAR, default=False): selector.BooleanSelector(
