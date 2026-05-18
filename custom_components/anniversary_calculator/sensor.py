@@ -25,7 +25,6 @@ from .const import (
     CONF_LUNAR,
     CONF_INTERCAL,
     INTERCALATION,
-    SW_VERSION,
     MODEL,
     MANUFACT,
     ATTRIBUTION,
