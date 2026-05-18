@@ -1,6 +1,6 @@
 """
 Anniversary sensor supporting the lunar calendar.
-https://github.com/GrecHouse/anniversary_calculator
+https://github.com/Murianwind/anniversary_calculator
 """
 
 from datetime import timedelta, date
@@ -58,12 +58,6 @@ async def async_setup_entry(
 
     sensor = AnniversarySensor(hass, name, date_str, is_lunar, is_intercalation, anniv_type, is_mmdd, unique_id)
 
-    # 타이머 취소 함수를 entry에 등록해 언로드 시 자동 정리
-    cancel_timer = async_track_point_in_utc_time(
-        hass, sensor.point_in_time_listener, sensor.get_next_interval()
-    )
-    entry.async_on_unload(cancel_timer)
-
     async_add_entities([sensor])
 
 
@@ -102,6 +96,11 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         last_state = await self.async_get_last_state()
         if last_state is not None and self._state is None:
             self._state = last_state.state
+
+        # 첫 타이머 시작
+        self._cancel_timer = async_track_point_in_utc_time(
+            self.hass, self.point_in_time_listener, self.get_next_interval()
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         """엔티티 제거 시 타이머 해제."""
