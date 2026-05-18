@@ -20,5 +20,21 @@
                 }
             }
         }
+    },
+    "options": {
+        "step": {
+            "init": {
+                "data": {
+                    "anniv_name": "기념일 이름",
+                    "anniv_date": "일자 (YYYY-MM-DD 또는 MM-DD)",
+                    "anniv_type": "기념일 종류",
+                    "lunar": "음력",
+                    "intercalation": "윤달여부"
+                }
+            }
+        },
+        "error": {
+            "invalid_date": "올바른 날짜 형식이 아닙니다. YYYY-MM-DD 또는 MM-DD 형식으로 입력하세요."
+        }
     }
 }
