@@ -2,10 +2,10 @@ DOMAIN = "anniversary_calculator"
 NAME = "Anniversary Calculator"
 PLATFORM = "sensor"
 
-SW_VERSION = '2.0.0'
-MANUFACT   = 'GrecHouse'
+SW_VERSION = '2.0.1'
+MANUFACT   = 'Murianwind'
 MODEL = '기념일 계산기'
-ATTRIBUTION = 'Provided by GrecHouse'
+ATTRIBUTION = 'Provided by Murianwind'
 
 CONF_NAME = 'anniv_name'
 CONF_UID = 'unique_id'
