@@ -1,0 +1,23 @@
+{
+    "title": "기념일 계산기",
+    "config": {
+        "abort": {
+            "already_configured": "이름, 날짜, 종류가 모두 동일한 기념일이 이미 등록되어 있습니다."
+        },
+        "error": {
+            "invalid_date": "올바른 날짜 형식이 아닙니다. YYYY-MM-DD 또는 MM-DD 형식으로 입력하세요."
+        },
+        "step": {
+            "user": {
+                "title": "기념일 계산기",
+                "data": {
+                    "anniv_name": "기념일 이름",
+                    "anniv_date": "일자 (YYYY-MM-DD 또는 MM-DD)",
+                    "anniv_type": "기념일 종류",
+                    "lunar": "음력",
+                    "intercalation": "윤달여부"
+                }
+            }
+        }
+    }
+}
