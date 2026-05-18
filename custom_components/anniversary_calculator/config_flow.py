@@ -63,10 +63,6 @@ class AnniversaryConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return self._show_user_form(errors)
 
-    async def async_step_import(self, import_info):
-        """Handle import from config file."""
-        return await self.async_step_user(import_info)
-
     @callback
     def _show_user_form(self, errors: dict | None = None):
         schema = vol.Schema(
