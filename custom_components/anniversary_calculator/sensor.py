@@ -260,7 +260,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
 
         solar_date = self._date
         if self._lunar:
-            solar_date = self.lunar_to_solar(today, False)
+            solar_date = self.lunar_to_solar(today, False) or self._date
             lunar_date = self._date.strftime('%Y-%m-%d')
             if self._intercalation:
                 lunar_date += INTERCALATION
