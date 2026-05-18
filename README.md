@@ -1,10 +1,10 @@
-![version](https://img.shields.io/badge/version-2.0-blue)
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs)
 
 # 🎉 Anniversary Calculator Sensor for Home Assistant
 
-> 🔥 https://github.com/GrecHouse/anniversary 의 통합구성요소 버전입니다.\
-🔪 TTS 센서, 장보기 목록 등 일부 기능이 제거되었습니다. 이 기능이 필요하신 분은 기존 버전을 사용하시기 바랍니다.
+> 🔥 이 프로젝트는 [GrecHouse/anniversary-calculator](https://github.com/GrecHouse/anniversary-calculator)의 포크 버전입니다.\
+> 원본 개발자인 **그렉하우스** 님께 깊은 감사를 드립니다.\
+ TTS 센서, 장보기 목록 등 일부 기능이 제거되었습니다. 이 기능이 필요하신 분은 기존 버전을 사용하시기 바랍니다.
 
 홈어시스턴트 커스텀 컴포넌트입니다.\
 기념일 D-Day를 센서로 알려줍니다.
@@ -12,12 +12,13 @@
 - 등록된 기념일의 양력, 음력을 변환하여 속성값으로 알려줍니다.
 - 다가올 기념일 날짜도 알려줍니다.
 - 기념일에서 현재 날짜까지의 일자 카운트도 알려줍니다.
-- [Lovelace UI 커스텀 카드](https://github.com/GrecHouse/anniversary-lovelace-card)를 이용할 수 있습니다.
+- [Lovelace UI 커스텀 카드](https://github.com/Murianwind/anniversary-lovelace-card)를 이용할 수 있습니다.
 
 ## Version history
 | Version | Date        |               |
 | :-----: | :---------: | ------------- |
-| v2.0    | 2024.04.12  | 통합구성요소로 변경 |
+| v2.0.1  | 2024.05.20  | Unique ID 입력 필드 추가 및 타이머 로직 안정화 |
+| v2.0    | 2024.04.12  | 통합구성요소(Config Flow) 지원 |
 
 <br>
 
@@ -27,12 +28,12 @@
 - 아래 링크를 클릭해서 이동 후 다운로드 버튼을 눌러 설치하세요.
 - 다운로드 후 Home Assistant를 재시작합니다.
 
-[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=grechouse&repository=anniversary-calculator&category=integration)
+[![Open your Home Assistant instance and open a repository inside the Home Assistant Community Store.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=Murianwind&repository=anniversary_calculator&category=integration)
 
 ### HACS 설정을 통한 설치
 - HACS > Integrations 메뉴 선택
 - 우측 상단 메뉴 버튼 클릭 후 Custom repositories 선택
-- Add Custom Repository URL 에 `https://github.com/GrecHouse/anniversary-calculator` 입력, \
+- Add Custom Repository URL 에 `https://github.com/Murianwind/anniversary_calculator` 입력, \
   Category에 `Integration` 선택 후 ADD
 - HACS > Integrations 메뉴에서 우측 하단 + 버튼 누르고 `[KR] Anniversary Calculator Sensor` 검색하여 설치
 - Home Assistant 를 재시작합니다.
@@ -85,5 +86,5 @@
 
 <br>
 
-## 버그 또는 문의사항
-네이버 카페 [HomeAssistant](https://cafe.naver.com/koreassistant/) `그렉하우스`
+## 결함 또는 문의사항
+GitHub Issues 또는 네이버 카페 HomeAssistant
