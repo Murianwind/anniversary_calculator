@@ -2,7 +2,6 @@ DOMAIN = "anniversary_calculator"
 NAME = "Anniversary Calculator"
 PLATFORM = "sensor"
 
-SW_VERSION = '2.0.1'
 MANUFACT   = 'Murianwind'
 MODEL = '기념일 계산기'
 ATTRIBUTION = 'Provided by Murianwind'
