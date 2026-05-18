@@ -83,7 +83,6 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         self._state = None
         self._attribute: dict = {}
         self.hass = hass
-        self.firmware_version = SW_VERSION
         self.model = MODEL
         self.manufacturer = MANUFACT
         self._update_internal_state(dt_util.utcnow())
@@ -112,7 +111,6 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         return {
             "identifiers": {(DOMAIN, self._name)},
             "name": self._name,
-            "sw_version": self.firmware_version,
             "model": self.model,
             "manufacturer": self.manufacturer,
         }
