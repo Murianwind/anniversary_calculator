@@ -12,7 +12,7 @@
                 "title": "기념일 계산기",
                 "data": {
                     "anniv_name": "기념일 이름",
-                    "unique_id": "고유 ID (영문/숫자 추천)",
+                    "anniv_uid": "고유 ID (영문/숫자 추천, 예: my_wedding_anniv)",
                     "anniv_date": "일자 (YYYY-MM-DD 또는 MM-DD)",
                     "anniv_type": "기념일 종류",
                     "lunar": "음력",
