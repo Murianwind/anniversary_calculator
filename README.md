@@ -19,8 +19,6 @@
 | v2.0.1  | 2024.05.20  | Unique ID 입력 필드 추가 및 타이머 로직 안정화 |
 | v2.0    | 2024.04.12  | 통합구성요소(Config Flow) 지원 |
 
-<br>
-
 ## Installation
 
 ### _My Home Assistant_ HACS로 설치
@@ -42,20 +40,11 @@
 - configuration.yaml 파일에 설정을 추가합니다.
 - Home Assistant 를 재시작합니다.
 
-<br>
-
 ## Usage
 
 ### configuration
 - 설정 > 기기 및 서비스 > 통합구성요소 추가하기
 - `기념일` 등으로 검색해서 추가하세요.
-
-![Step1](images/anniv1.png)
-
-![Step2](images/anniv2.png)
-
-![Step3](images/anniv3.png)
-
 
 ### 기념일 종류
 - `생일` 을 선택할 경우 한국 나이 (Korean Age) 속성이 추가됩니다.
@@ -77,13 +66,5 @@
 - `is_lunar` : 음력 여부
 - `is_mmdd` : MM-DD 형식 여부
 
-
-<br>
-
 ## 음력 처리는 korean-lunar-calendar 라이브러리를 이용합니다.
 - https://pypi.org/project/korean-lunar-calendar/
-
-<br>
-
-## 결함 또는 문의사항
-GitHub Issues 또는 네이버 카페 HomeAssistant
