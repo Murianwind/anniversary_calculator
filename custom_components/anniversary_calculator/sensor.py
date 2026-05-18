@@ -55,7 +55,7 @@ async def async_setup_entry(
             date_str = year_added
             is_mmdd = True
 
-    sensor = AnniversarySensor(hass, name, date_str, is_lunar, is_intercalation, anniv_type, is_mmdd, unique_id)
+    sensor = AnniversarySensor(entry, date_str, is_mmdd)
 
     async_add_entities([sensor])
 
@@ -71,19 +71,18 @@ def _next_year_date(anniv: date, base_year: int) -> date:
 class AnniversarySensor(RestoreEntity, SensorEntity):
     """Implementation of an Anniversary sensor."""
 
-    def __init__(self, hass, name, date_str, lunar, intercalation, anniv_type, mmdd, unique_id):
+    def __init__(self, entry: ConfigEntry, date_str: str, is_mmdd: bool):
         """Initialize the sensor."""
-        self._name = name
-        parsed_date = dt_util.parse_date(date_str)
-        self._date = parsed_date.date() if parsed_date else None
-        self._lunar = lunar
-        self._intercalation = intercalation
-        self._type = anniv_type
-        self._unique_id = unique_id
-        self._mmdd = mmdd
+        self._name = entry.data.get(CONF_NAME)
+        # dt_util.parse_date는 이미 date 객체를 반환함
+        self._date = dt_util.parse_date(date_str)
+        self._lunar = entry.data.get(CONF_LUNAR)
+        self._intercalation = entry.data.get(CONF_INTERCAL)
+        self._type = entry.data.get(CONF_TYPE)
+        self._unique_id = entry.data.get(CONF_UID)
+        self._mmdd = is_mmdd
         self._state = None
         self._attribute: dict = {}
-        self.hass = hass
         self.model = MODEL
         self.manufacturer = MANUFACT
 
@@ -161,8 +160,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
                 _LOGGER.warning("Non-existent date correction: %s -> %s", lunar_date, calendar.SolarIsoFormat())
         else:
             calendar.setLunarDate(lunar_date.year, lunar_date.month, lunar_date.day, self._intercalation)
-        res = dt_util.parse_date(calendar.SolarIsoFormat())
-        return res.date() if res else None
+        return dt_util.parse_date(calendar.SolarIsoFormat())
 
     def lunar_to_solar_early_day(self, today: date) -> date | None:
         """전년도 기준 음력→양력 변환 (d_day 계산용)."""
@@ -174,8 +172,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
             calib = lunar_date - timedelta(1)
             calendar.setLunarDate(today.year - 1, calib.month, calib.day, self._intercalation)
             _LOGGER.warning("Non-existent date correction: %s -> %s", lunar_date, calendar.SolarIsoFormat())
-        res = dt_util.parse_date(calendar.SolarIsoFormat())
-        return res.date() if res else None
+        return dt_util.parse_date(calendar.SolarIsoFormat())
 
     def lunar_gapja(self, lunar_date_str: str) -> str:
         intercalation = False
@@ -252,11 +249,16 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
 
     def _update_internal_state(self, time_date) -> None:
         today = dt_util.as_local(dt_util.utcnow()).date()
+
+        if self._date is None:
+            self._state = None
+            self._attribute = {}
+            return
+
         dday = self.d_day(today)
         self._state = dday[0]
 
         solar_date = self._date
-        if solar_date is None: return
         if self._lunar:
             solar_date = self.lunar_to_solar(today, False)
             lunar_date = self._date.strftime('%Y-%m-%d')
@@ -284,5 +286,5 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
     @callback
     def point_in_time_listener(self, _time_date) -> None:
         """자정마다 상태를 갱신."""
-        self._update_internal_state(time_date)
+        self._update_internal_state(None)
         self.async_schedule_update_ha_state()
