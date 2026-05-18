@@ -1,5 +1,5 @@
 {
-    "domain": "anniversary-calculator",
+    "domain": "anniversary_calculator",
     "name": "기념일 계산기",
     "documentation": "https://github.com/GrecHouse/anniversary-calculator",
     "config_flow": true,
