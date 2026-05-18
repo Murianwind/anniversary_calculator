@@ -39,6 +39,14 @@ class AnniversaryConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._is_lunar: bool | None = None
         self._is_intercal: bool | None = None
 
+    @staticmethod
+    @callback
+    def async_get_options_flow(
+        config_entry: config_entries.ConfigEntry,
+    ) -> config_entries.OptionsFlow:
+        """Create the options flow."""
+        return AnniversaryOptionsFlowHandler(config_entry)
+
     async def async_step_user(self, user_input=None):
         """Handle the initial step."""
         errors: dict[str, str] = {}
@@ -83,3 +91,32 @@ class AnniversaryConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         return self.async_show_form(
             step_id="user", data_schema=schema, errors=errors or {}
         )
+
+
+class AnniversaryOptionsFlowHandler(config_entries.OptionsFlow):
+    """Handle options flow for Anniversary Calculator."""
+
+    def __init__(self, config_entry: config_entries.ConfigEntry) -> None:
+        """Initialize options flow."""
+        self.config_entry = config_entry
+
+    async def async_step_init(self, user_input=None):
+        """Manage the options."""
+        if user_input is not None:
+            return self.async_create_entry(title="", data=user_input)
+
+        schema = vol.Schema(
+            {
+                vol.Required(CONF_NAME, default=self.config_entry.data.get(CONF_NAME)): str,
+                vol.Required(CONF_DATE, default=self.config_entry.data.get(CONF_DATE)): str,
+                vol.Required(CONF_TYPE, default=self.config_entry.data.get(CONF_TYPE, "anniversary")): vol.In(ANNIV_TYPE),
+                vol.Optional(CONF_LUNAR, default=self.config_entry.data.get(CONF_LUNAR, False)): selector.BooleanSelector(
+                    selector.BooleanSelectorConfig()
+                ),
+                vol.Optional(CONF_INTERCAL, default=self.config_entry.data.get(CONF_INTERCAL, False)): selector.BooleanSelector(
+                    selector.BooleanSelectorConfig()
+                ),
+            }
+        )
+
+        return self.async_show_form(step_id="init", data_schema=schema)
