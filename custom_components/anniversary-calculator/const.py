@@ -1,4 +1,4 @@
-DOMAIN = "anniversary-calculator"
+DOMAIN = "anniversary_calculator"
 NAME = "Anniversary Calculator"
 PLATFORM = "sensor"
 
@@ -12,9 +12,6 @@ CONF_DATE = 'anniv_date'
 CONF_TYPE = 'anniv_type'
 CONF_LUNAR = 'lunar'
 CONF_INTERCAL = 'intercalation'
-
-#CONF_TTS_DAYS = 'tts_days'
-#CONF_TTS_SCAN_INTERVAL = 'tts_scan_interval'
 
 INTERCALATION = ' (윤달)'
 
