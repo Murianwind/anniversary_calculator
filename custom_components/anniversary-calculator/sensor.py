@@ -1,58 +1,83 @@
 """
 Anniversary sensor supporting the lunar calendar.
-For more details about this platform, please refer to the documentation at
 https://github.com/GrecHouse/anniversary_calculator
-
-HA 기념일 센서 : 기념일의 D-Day 정보와 양/음력 정보를 알려줍니다.
-다모아님의 아이디어를 기반으로 제작되었습니다.
 """
 
-from datetime import timedelta, date, datetime
+from datetime import timedelta, date
 import logging
 
-import voluptuous as vol
-
-from homeassistant.core import callback
-from homeassistant.helpers.entity import Entity
+from homeassistant.components.sensor import SensorEntity
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.event import async_track_point_in_utc_time
-import homeassistant.helpers.config_validation as cv
 import homeassistant.util.dt as dt_util
 
 from korean_lunar_calendar import KoreanLunarCalendar
 
-from .const import *
+from .const import (
+    DOMAIN,
+    CONF_NAME,
+    CONF_DATE,
+    CONF_TYPE,
+    CONF_LUNAR,
+    CONF_INTERCAL,
+    INTERCALATION,
+    SW_VERSION,
+    MODEL,
+    MANUFACT,
+    ATTRIBUTION,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup_entry(hass, entry, async_add_entities):
-    """통합 구성요소의 sensor 플랫폼 Entry 설정"""
 
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """통합 구성요소의 sensor 플랫폼 Entry 설정"""
     _LOGGER.debug(entry.data)
 
-    date_str = entry.data.get(CONF_DATE)
-    is_lunar = entry.data.get(CONF_LUNAR)
-    is_intercalation = entry.data.get(CONF_INTERCAL)
-    anniv_type = entry.data.get(CONF_TYPE)
-    name = entry.data.get(CONF_NAME)
+    date_str: str = entry.data.get(CONF_DATE)
+    is_lunar: bool = entry.data.get(CONF_LUNAR)
+    is_intercalation: bool = entry.data.get(CONF_INTERCAL)
+    anniv_type: str = entry.data.get(CONF_TYPE)
+    name: str = entry.data.get(CONF_NAME)
 
     is_mmdd = False
     if dt_util.parse_date(date_str) is None:
-        year_added_date_str = str(dt_util.as_local(dt_util.utcnow()).date().year) + "-" + date_str
-        if dt_util.parse_date(year_added_date_str) is not None:
-            date_str = year_added_date_str
+        year_added = f"{dt_util.as_local(dt_util.utcnow()).date().year}-{date_str}"
+        if dt_util.parse_date(year_added) is not None:
+            date_str = year_added
             is_mmdd = True
 
     sensor = AnniversarySensor(hass, name, date_str, is_lunar, is_intercalation, anniv_type, is_mmdd)
-    async_track_point_in_utc_time(hass, sensor.point_in_time_listener, sensor.get_next_interval())
+
+    # 타이머 취소 함수를 entry에 등록해 언로드 시 자동 정리
+    cancel_timer = async_track_point_in_utc_time(
+        hass, sensor.point_in_time_listener, sensor.get_next_interval()
+    )
+    entry.async_on_unload(cancel_timer)
 
     async_add_entities([sensor])
 
-class AnniversarySensor(Entity):
-    """Implementation of a Anniversary sensor."""
+
+def _next_year_date(anniv: date, base_year: int) -> date:
+    """2월 29일처럼 해당 연도에 없는 날짜를 안전하게 다음 해로 올림."""
+    # 윤년이 아닌 해에 2월 29일이 없으므로 28일로 내림
+    if anniv.month == 2 and anniv.day == 29:
+        return date(base_year + 1, 2, 28)
+    return date(base_year + 1, anniv.month, anniv.day)
+
+
+class AnniversarySensor(RestoreEntity, SensorEntity):
+    """Implementation of an Anniversary sensor."""
 
     def __init__(self, hass, name, date_str, lunar, intercalation, anniv_type, mmdd):
         """Initialize the sensor."""
-        #self.entity_id = async_generate_entity_id(ENTITY_ID_FORMAT, deviceId, hass=hass)
         self._name = name
         self._date = dt_util.parse_date(date_str)
         self._lunar = lunar
@@ -60,159 +85,147 @@ class AnniversarySensor(Entity):
         self._type = anniv_type
         self._mmdd = mmdd
         self._state = None
+        self._attribute: dict = {}
         self.hass = hass
-        self._update_internal_state(dt_util.utcnow())
         self.firmware_version = SW_VERSION
         self.model = MODEL
         self.manufacturer = MANUFACT
+        self._update_internal_state(dt_util.utcnow())
+
+    async def async_added_to_hass(self) -> None:
+        """HA 재시작 시 직전 상태를 복원해 잠깐 unknown이 되는 현상 방지."""
+        await super().async_added_to_hass()
+        last_state = await self.async_get_last_state()
+        if last_state is not None and self._state is None:
+            self._state = last_state.state
 
     @property
     def device_info(self):
-        """Information about this entity/device."""
         return {
             "identifiers": {(DOMAIN, self._name)},
             "name": self._name,
             "sw_version": self.firmware_version,
             "model": self.model,
-            "manufacturer": self.manufacturer
+            "manufacturer": self.manufacturer,
         }
 
     @property
     def attribution(self):
-        """Return the attribution."""
         return ATTRIBUTION
 
     @property
     def unique_id(self):
-        """Return the entity ID."""
+        # 기존 등록 항목과의 호환성을 위해 원래 포맷 유지
         return f'sensor.anniv_{self._name}'
 
     @property
     def name(self):
-        """Return the name of the sensor."""
         return self._name
 
     @property
     def state(self):
-        """Return the state of the sensor."""
         return self._state
 
     @property
     def icon(self):
-        """Icon to use in the frontend, if any."""
-        if self._type == 'birth':
-            return 'mdi:calendar-star'
-        elif self._type == 'wedding':
-            return 'mdi:calendar-heart'
-        elif self._type == 'memorial':
-            return 'mdi:calendar-clock'
-        else:
-            return 'mdi:calendar-check'
+        icons = {
+            'birth': 'mdi:calendar-star',
+            'wedding': 'mdi:calendar-heart',
+            'memorial': 'mdi:calendar-clock',
+        }
+        return icons.get(self._type, 'mdi:calendar-check')
 
     @property
     def extra_state_attributes(self):
-        """Return the attribute(s) of the sensor"""
         return self._attribute
 
-    def solar_to_lunar(self, solar_date):
+    def solar_to_lunar(self, solar_date: date) -> str:
         calendar = KoreanLunarCalendar()
         calendar.setSolarDate(solar_date.year, solar_date.month, solar_date.day)
-        lunar = calendar.LunarIsoFormat()
-        lunar = lunar.replace(' Intercalation', INTERCALATION)
-        return lunar
+        return calendar.LunarIsoFormat().replace(' Intercalation', INTERCALATION)
 
-    def lunar_to_solar(self, today, this_year):
+    def lunar_to_solar(self, today: date, this_year: bool) -> date | None:
         lunar_date = self._date
         calendar = KoreanLunarCalendar()
         if this_year or self._mmdd:
             calendar.setLunarDate(today.year, lunar_date.month, lunar_date.day, self._intercalation)
             if calendar.SolarIsoFormat() == '0000-00-00':
-                lunar_date_calib = lunar_date - timedelta(1)
-                calendar.setLunarDate(today.year, lunar_date_calib.month, lunar_date_calib.day, self._intercalation)
-                _LOGGER.warning("Non-existent date correction : %s -> %s", lunar_date, calendar.SolarIsoFormat())
+                # 해당 연도에 존재하지 않는 음력 날짜 → 하루 앞당겨 보정
+                calib = lunar_date - timedelta(1)
+                calendar.setLunarDate(today.year, calib.month, calib.day, self._intercalation)
+                _LOGGER.warning("Non-existent date correction: %s -> %s", lunar_date, calendar.SolarIsoFormat())
         else:
             calendar.setLunarDate(lunar_date.year, lunar_date.month, lunar_date.day, self._intercalation)
         return dt_util.parse_date(calendar.SolarIsoFormat())
 
-    def lunar_to_solar_early_day(self, today):
+    def lunar_to_solar_early_day(self, today: date) -> date | None:
+        """전년도 기준 음력→양력 변환 (d_day 계산용)."""
         lunar_date = self._date
         calendar = KoreanLunarCalendar()
-        calendar.setLunarDate(today.year-1, lunar_date.month, lunar_date.day, self._intercalation)
+        calendar.setLunarDate(today.year - 1, lunar_date.month, lunar_date.day, self._intercalation)
         if calendar.SolarIsoFormat() == '0000-00-00':
-            lunar_date_calib = lunar_date - timedelta(1)
-            calendar.setLunarDate(today.year-1, lunar_date_calib.month, lunar_date_calib.day, self._intercalation)
-            _LOGGER.warning("Non-existent date correction : %s -> %s", lunar_date, calendar.SolarIsoFormat())
+            calib = lunar_date - timedelta(1)
+            calendar.setLunarDate(today.year - 1, calib.month, calib.day, self._intercalation)
+            _LOGGER.warning("Non-existent date correction: %s -> %s", lunar_date, calendar.SolarIsoFormat())
         return dt_util.parse_date(calendar.SolarIsoFormat())
 
-    def lunar_gapja(self, lunarDate):
+    def lunar_gapja(self, lunar_date_str: str) -> str:
         intercalation = False
-        if '윤달' in lunarDate:
+        if '윤달' in lunar_date_str:
             intercalation = True
-            lunarDate = lunarDate.replace(INTERCALATION,'')
+            lunar_date_str = lunar_date_str.replace(INTERCALATION, '')
         calendar = KoreanLunarCalendar()
         try:
-            lunar = dt_util.parse_date(lunarDate)
+            lunar = dt_util.parse_date(lunar_date_str)
             calendar.setLunarDate(lunar.year, lunar.month, lunar.day, intercalation)
-        except AttributeError:
+        except Exception:
             try:
-                calendar.setLunarDate(lunarDate[:4], lunarDate[5:7], lunarDate[8:], intercalation)
-            except:
+                calendar.setLunarDate(
+                    int(lunar_date_str[:4]),
+                    int(lunar_date_str[5:7]),
+                    int(lunar_date_str[8:]),
+                    intercalation,
+                )
+            except Exception:
+                _LOGGER.debug("lunar_gapja: 갑자 변환 실패 — %s", lunar_date_str)
                 return "-"
         return calendar.getGapJaString()
 
-    def is_past(self, today):
-        anniv = self._date
+    def is_past(self, today: date) -> bool:
         if self._lunar:
             anniv = self.lunar_to_solar(today, True)
         else:
-            anniv = date(today.year, anniv.month, anniv.day)
-        if (anniv-today).days < 0:
-            return True
-        else:
-            return False
+            anniv = date(today.year, self._date.month, self._date.day)
+        return (anniv - today).days < 0
 
-    def past_days(self, today):
-        anniv = self._date
-        if self._lunar:
-            anniv = self.lunar_to_solar(today, False)
-        delta = today - anniv
-        return delta.days + 1
+    def past_days(self, today: date) -> int:
+        anniv = self._date if not self._lunar else self.lunar_to_solar(today, False)
+        return (today - anniv).days + 1
 
-    def korean_age(self, today, dday):
-        addyear = 1 + dt_util.parse_date(dday).year - today.year
-        return today.year - self._date.year + addyear
+    def korean_age(self, today: date, upcoming_date_str: str) -> int:
+        upcoming_year = dt_util.parse_date(upcoming_date_str).year
+        return today.year - self._date.year + 1 + (upcoming_year - today.year)
 
-    def upcoming_count(self, today):
-        anniv = self._date
-        if self._lunar:
-            anniv = self.lunar_to_solar(today, False)
+    def upcoming_count(self, today: date) -> int:
+        anniv = self._date if not self._lunar else self.lunar_to_solar(today, False)
+        offset = 1 if self.is_past(today) else 0
+        return today.year - anniv.year + offset
 
-        if self.is_past(today):
-            return today.year - anniv.year + 1
-        else:
-            return today.year - anniv.year
-
-    def d_day(self, today):
+    def d_day(self, today: date) -> list:
         anniv = self._date
 
         if self._lunar:
-            anniv_early_day = self.lunar_to_solar_early_day(today)
-            delta = anniv_early_day - today
-            if delta.days >= 0:
-                return [delta.days, anniv_early_day.strftime('%Y-%m-%d')]
+            # 전년도 음력 기준 양력일이 아직 지나지 않았으면 그쪽이 더 가까운 기념일
+            anniv_early = self.lunar_to_solar_early_day(today)
+            if anniv_early and (anniv_early - today).days >= 0:
+                return [(anniv_early - today).days, anniv_early.strftime('%Y-%m-%d')]
 
         if self.is_past(today):
             if self._lunar:
-                if today.month == 2 and today.day == 29:
-                    newday = date(today.year+1, today.month, today.day-1)
-                else:
-                    newday = date(today.year+1, today.month, today.day)
-                anniv = self.lunar_to_solar(newday, True)
+                ref = date(today.year + 1, today.month, today.day)
+                anniv = self.lunar_to_solar(ref, True)
             else:
-                if anniv.month == 2 and anniv.day == 29:
-                    anniv = date(today.year+1, anniv.month, anniv.day-1)
-                else:
-                    anniv = date(today.year+1, anniv.month, anniv.day)
+                anniv = _next_year_date(anniv, today.year)
         else:
             if self._lunar:
                 anniv = self.lunar_to_solar(today, True)
@@ -223,22 +236,23 @@ class AnniversarySensor(Entity):
         return [delta.days, anniv.strftime('%Y-%m-%d')]
 
     def get_next_interval(self, now=None):
-        """Compute next time an update should occur."""
+        """자정 직후 업데이트 시각 계산."""
         if now is None:
             now = dt_util.utcnow()
         midnight = dt_util.start_of_local_day(dt_util.as_local(now))
         return midnight + timedelta(seconds=86400)
 
-    def _update_internal_state(self, time_date):
+    def _update_internal_state(self, time_date) -> None:
         today = dt_util.as_local(dt_util.utcnow()).date()
         dday = self.d_day(today)
         self._state = dday[0]
+
         solar_date = self._date
-        lunar_date = self._date.strftime('%Y-%m-%d')
-        if self._intercalation:
-            lunar_date = lunar_date + INTERCALATION
         if self._lunar:
             solar_date = self.lunar_to_solar(today, False)
+            lunar_date = self._date.strftime('%Y-%m-%d')
+            if self._intercalation:
+                lunar_date += INTERCALATION
         else:
             lunar_date = self.solar_to_lunar(self._date)
 
@@ -250,14 +264,21 @@ class AnniversarySensor(Entity):
             'past_days': '-' if self._mmdd else self.past_days(today),
             'upcoming_count': '-' if self._mmdd else self.upcoming_count(today),
             'upcoming_date': dday[1],
-            'korean_age': '-' if self._mmdd or self._type != 'birth' else self.korean_age(today, dday[1]),
+            'korean_age': (
+                '-' if self._mmdd or self._type != 'birth'
+                else self.korean_age(today, dday[1])
+            ),
             'is_lunar': str(self._lunar),
-            'is_mmdd': str(self._mmdd)
+            'is_mmdd': str(self._mmdd),
         }
 
     @callback
-    def point_in_time_listener(self, time_date):
-        """Get the latest data and update state."""
+    def point_in_time_listener(self, time_date) -> None:
+        """자정마다 상태를 갱신하고 다음 자정 타이머를 등록."""
         self._update_internal_state(time_date)
         self.async_schedule_update_ha_state()
-        async_track_point_in_utc_time(self.hass, self.point_in_time_listener, self.get_next_interval())
+        # 센서 자체에서 다음 타이머를 재등록하되, 취소 함수를 async_on_remove에 등록
+        cancel = async_track_point_in_utc_time(
+            self.hass, self.point_in_time_listener, self.get_next_interval()
+        )
+        self.async_on_remove(cancel)
