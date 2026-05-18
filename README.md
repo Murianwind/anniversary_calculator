@@ -3,7 +3,8 @@
 # 🎉 Anniversary Calculator Sensor for Home Assistant
 
 > 🔥 이 프로젝트는 [GrecHouse/anniversary-calculator](https://github.com/GrecHouse/anniversary-calculator)의 포크 버전입니다.\
-> 원본 개발자인 **그렉하우스** 님께 깊은 감사를 드립니다.
+> 원본 개발자인 **그렉하우스** 님께 깊은 감사를 드립니다.\
+ TTS 센서, 장보기 목록 등 일부 기능이 제거되었습니다. 이 기능이 필요하신 분은 기존 버전을 사용하시기 바랍니다.
 
 홈어시스턴트 커스텀 컴포넌트입니다.\
 기념일 D-Day를 센서로 알려줍니다.
@@ -16,8 +17,11 @@
 ## Version history
 | Version | Date        |               |
 | :-----: | :---------: | ------------- |
+| v2.0.2  | 2024.05.21  | Options Flow 검증 추가, __init__ 구조 개선 및 버그 수정 |
 | v2.0.1  | 2024.05.20  | Unique ID 입력 필드 추가 및 타이머 로직 안정화 |
 | v2.0    | 2024.04.12  | 통합구성요소(Config Flow) 지원 |
+
+<br>
 
 ## Installation
 
@@ -40,11 +44,20 @@
 - configuration.yaml 파일에 설정을 추가합니다.
 - Home Assistant 를 재시작합니다.
 
+<br>
+
 ## Usage
 
 ### configuration
 - 설정 > 기기 및 서비스 > 통합구성요소 추가하기
 - `기념일` 등으로 검색해서 추가하세요.
+
+![Step1](images/anniv1.png)
+
+![Step2](images/anniv2.png)
+
+![Step3](images/anniv3.png)
+
 
 ### 기념일 종류
 - `생일` 을 선택할 경우 한국 나이 (Korean Age) 속성이 추가됩니다.
@@ -66,5 +79,13 @@
 - `is_lunar` : 음력 여부
 - `is_mmdd` : MM-DD 형식 여부
 
+
+<br>
+
 ## 음력 처리는 korean-lunar-calendar 라이브러리를 이용합니다.
 - https://pypi.org/project/korean-lunar-calendar/
+
+<br>
+
+## 결함 또는 문의사항
+GitHub Issues 또는 네이버 카페 HomeAssistant
