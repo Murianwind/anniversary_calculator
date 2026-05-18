@@ -18,6 +18,7 @@ from korean_lunar_calendar import KoreanLunarCalendar
 
 from .const import (
     DOMAIN,
+    CONF_UID,
     CONF_NAME,
     CONF_DATE,
     CONF_TYPE,
@@ -46,6 +47,7 @@ async def async_setup_entry(
     is_intercalation: bool = entry.data.get(CONF_INTERCAL)
     anniv_type: str = entry.data.get(CONF_TYPE)
     name: str = entry.data.get(CONF_NAME)
+    unique_id: str = entry.data.get(CONF_UID)
 
     is_mmdd = False
     if dt_util.parse_date(date_str) is None:
@@ -54,7 +56,7 @@ async def async_setup_entry(
             date_str = year_added
             is_mmdd = True
 
-    sensor = AnniversarySensor(hass, name, date_str, is_lunar, is_intercalation, anniv_type, is_mmdd)
+    sensor = AnniversarySensor(hass, name, date_str, is_lunar, is_intercalation, anniv_type, is_mmdd, unique_id)
 
     # 타이머 취소 함수를 entry에 등록해 언로드 시 자동 정리
     cancel_timer = async_track_point_in_utc_time(
@@ -76,13 +78,14 @@ def _next_year_date(anniv: date, base_year: int) -> date:
 class AnniversarySensor(RestoreEntity, SensorEntity):
     """Implementation of an Anniversary sensor."""
 
-    def __init__(self, hass, name, date_str, lunar, intercalation, anniv_type, mmdd):
+    def __init__(self, hass, name, date_str, lunar, intercalation, anniv_type, mmdd, unique_id):
         """Initialize the sensor."""
         self._name = name
         self._date = dt_util.parse_date(date_str)
         self._lunar = lunar
         self._intercalation = intercalation
         self._type = anniv_type
+        self._unique_id = unique_id
         self._mmdd = mmdd
         self._state = None
         self._attribute: dict = {}
@@ -91,6 +94,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         self.model = MODEL
         self.manufacturer = MANUFACT
         self._update_internal_state(dt_util.utcnow())
+        self._cancel_timer = None
 
     async def async_added_to_hass(self) -> None:
         """HA 재시작 시 직전 상태를 복원해 잠깐 unknown이 되는 현상 방지."""
@@ -98,6 +102,12 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         last_state = await self.async_get_last_state()
         if last_state is not None and self._state is None:
             self._state = last_state.state
+
+    async def async_will_remove_from_hass(self) -> None:
+        """엔티티 제거 시 타이머 해제."""
+        if self._cancel_timer:
+            self._cancel_timer()
+        await super().async_will_remove_from_hass()
 
     @property
     def device_info(self):
@@ -115,8 +125,7 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
 
     @property
     def unique_id(self):
-        # 기존 등록 항목과의 호환성을 위해 원래 포맷 유지
-        return f'sensor.anniv_{self._name}'
+        return self._unique_id
 
     @property
     def name(self):
@@ -277,8 +286,11 @@ class AnniversarySensor(RestoreEntity, SensorEntity):
         """자정마다 상태를 갱신하고 다음 자정 타이머를 등록."""
         self._update_internal_state(time_date)
         self.async_schedule_update_ha_state()
-        # 센서 자체에서 다음 타이머를 재등록하되, 취소 함수를 async_on_remove에 등록
-        cancel = async_track_point_in_utc_time(
+        
+        # 기존 타이머가 있다면 취소 후 재등록 (메모리 누수 방지)
+        if self._cancel_timer:
+            self._cancel_timer()
+
+        self._cancel_timer = async_track_point_in_utc_time(
             self.hass, self.point_in_time_listener, self.get_next_interval()
         )
-        self.async_on_remove(cancel)
