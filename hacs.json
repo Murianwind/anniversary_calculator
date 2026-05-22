@@ -1,5 +1,5 @@
 {
-    "name": "[KR] Anniversary Calculator Sensor",
+    "name": "Anniversary Calculator Sensor",
     "country": "KR",
     "domains": ["sensor"],  
     "render_readme": true
